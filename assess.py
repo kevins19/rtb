@@ -9,23 +9,13 @@ ctr = []
 bids = []
 
 # python3 assess.py ./make-ipinyou-data/1458/train.yzx.txt.lr.pred ./make-ipinyou-data/1458/train.yzx.txt ./make-ipinyou-data/1458/test.yzx.txt.lr.pred ./make-ipinyou-data/1458/test.yzx.txt
-# 
-# code used to test relation
-# cnt = 20000
-# view ctr
+
 fi = open(sys.argv[3], 'r') 
 for line in fi:
-    # if cnt == 0:
-    #     break
-    # cnt -= 1
     ctr.append(float(line))
 
-# cnt = 20000
 fi = open(sys.argv[4], 'r')
 for line in fi:
-    # if cnt == 0:
-    #     break
-    # cnt -= 1
     bids.append(float(line.split()[1]))
 
 tmp = [(ctr[i], bids[i]) for i in range(len(ctr))]
@@ -35,10 +25,8 @@ k = 1000
 freq = len(ctr) // k
 ix = 0
 
-# x = [i for i in range(k)]
 x = []
 y = []
-
 
 for i in range(k):
     lim = freq
@@ -58,15 +46,11 @@ for i in range(k):
     y.append(avgb)
 
 
-
 def objective(x, a, b, c, d):
     return (a * x) + (b * x**2) + (c * x**3) + d
 
 popt, _ = curve_fit(objective, x, y)
 a, b, c, d = popt
-
-# print(len(x))
-# print(len(y))
 
 t = np.arange(0, 0.0015, 0.00005)
 y_line = objective(t, a, b, c, d)
@@ -83,19 +67,13 @@ bids_test = []
 clicks_test = []
 fi = open(sys.argv[3], 'r') 
 for line in fi:
-    # if cnt == 0:
-    #     break
-    # cnt -= 1
     ctr_test.append(float(line))
 
-# cnt = 20000
 fi = open(sys.argv[4], 'r')
 for line in fi:
-    # if cnt == 0:
-    #     break
-    # cnt -= 1
     bids_test.append(float(line.split()[1]))
     clicks_test.append(int(line.split()[0]))
+
 
 def bid(i, cost):
     if cost > bids_test[i]:
