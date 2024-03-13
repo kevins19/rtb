@@ -75,131 +75,88 @@ for line in fi:
     clicks_test.append(int(line.split()[0]))
 
 
-def bid(i, cost):
-    if cost > bids_test[i]:
-        return True
-    return False
-
 
 # python3 assess.py ./make-ipinyou-data/1458/train.yzx.txt.lr.pred ./make-ipinyou-data/1458/train.yzx.txt ./make-ipinyou-data/1458/test.yzx.txt.lr.pred ./make-ipinyou-data/1458/test.yzx.txt
 # python3 assess.py ./make-ipinyou-data/1458/train.yzx.txt.lr.pred ./make-ipinyou-data/1458/train.yzx.txt ./make-ipinyou-data/1458/train.yzx.txt.lr.pred ./make-ipinyou-data/1458/train.yzx.txt
 
-portion = 1/8
-B = sum(bids_test) * portion
-goal = 1.1 * portion
-# K_const = 20000
-K_lim = 400000
-K = K_lim
-bidFactor = 0.2
+def run_test(portion = 1/8, bids = bids_test, ctr = ctr_test, clicks = clicks_test, window_size = 20000, goal_portion = 1.1, K_lim = 400000, bid_factor = 0.2):
+    B = sum(bids) * portion
+    goal = goal_portion * portion
+    K = K_lim
 
-window = []
-winsize = 100000
-# winsize = 20000
-winsm = 0
+    window = []
+    winsm = 0
 
-cnt = 0
-N = len(bids_test)
-resu = []
-bud = []
-x_axis=[]
-clickcnt = 0
-sm = 0
+    cnt = 0
+    N = len(bids_test)
+    k_change = []
+    b_change = []
+    winrate_change = []
+    x_axis = []
+    clickcnt = 0
+    sm = 0
+    lucky_wins = 0
+    clicks_ev  =0
 
-lucky_wins = 0
+    def bid(i, cost):
+        if cost > bids[i]:
+            return True
+        return False
 
-def get_bid_price(i):
-    # global ca
-    # global cb
-    dif = K * ctr_test[i] - objective(ctr_test[i], a, b, c, d)
-    if dif < 0: # curve above line
-        # ca += 1
-        return (min(K * ctr_test[i], B), 1)
-    else: 
-        # cb += 1
-        return (min(objective(ctr_test[i], a, b, c, d) + dif * bidFactor, B), 0)
-
-
-
-for i in range(N):
-    # keep sliding window of cost usage: make sure the budget is not exhausted too quickly
-    bidPrice, res = get_bid_price(i)
-    win = bid(i, bidPrice)
-    window.append(win)
-    winsm += win
-    # print(bidPrice, bids_test[i], B, K, bidFactor, cnt)
-    if win:
-        B -= bids_test[i]
-        window.append(1)
-        sm += bids_test[i]
-        clickcnt += clicks_test[i]
-        cnt += 1
-        if res == 1: 
-            lucky_wins += 1
-    else:
-        window.append(0)
-    resu.append(K)
-    # resu.append(cnt)
-    # resu.append(bidFactor)
-    bud.append(B)
-    x_axis.append(i)
-    # if res == 0: # under line: on curve
-
-    # else: # on line: random bid!!
-
-    if len(window) >= winsize:
-        winrate = winsm / winsize
-        print(winsm)
-        # resu.append(winrate)
-        winsm -= window[-winsize]
-        if i%50 == 0 and winrate > goal:
-            K -= K * ((winrate - goal) / goal / (winsize/50))
-        # if winrate > portion:
-        #     K -= K * ((winrate - portion) / portion / winsize)
-    # else:
-    #     resu.append(0)
-    
-    if i % winsize == 0 and (i // winsize)%10 == 0:
-        K = K_lim
+    def get_bid_price(i):
+        dif = K * ctr[i] - objective(ctr[i], a, b, c, d)
+        if dif < 0: # curve above line
+            return (min(K * ctr[i], B), 1)
+        else: 
+            return (min(objective(ctr[i], a, b, c, d) + dif * bid_factor, B), 0)
         
+    for i in range(N):
+        # keep sliding window of cost usage: make sure the budget is not exhausted too quickly
+        bid_price, res = get_bid_price(i)
+        win = bid(i, bid_price)
+        window.append(win)
+        winsm += win
+        if win:
+            B -= bids[i]
+            window.append(1)
+            sm += bids[i]
+            clickcnt += clicks[i]
+            cnt += 1
+            if res == 1: 
+                lucky_wins += 1
+            clicks_ev += ctr[i]
+        else:
+            window.append(0)
 
-    # if bidFactor >= 1: 
-    #     bidFactor = 1
+        k_change.append(K)
+        b_change.append(B)
 
-    # if bet is on line:
-        # if win, shift line down
-            # K *= 0.99
-        # if lose, shift line up
-            # K *= 1.01
+        if len(window) >= window_size:
+            winrate = winsm / window_size
+            winsm -= window[-window_size]
+            winrate_change.append(winrate)
+            # x_axis.append(len(winrate_change))
+            if i%50 == 0 and winrate > goal:
+                K -= K * ((winrate - goal) / goal / (window_size/50))
+        
+        if i % window_size == 0 and (i // window_size)%10 == 0:
+            K = K_lim - (K_lim - K) / 2.0
 
-    # if len(window) >= winsize:
-    #     avg = sm / winsize
-    #     res = N - i - 1 # how many bids are left
-    #     res * avg
-    #     if res * avg > B:
-    #         K *= 0.9999
-    #     else: 
-    #         K *= 1.0001
-    #         K = min(K, Klim)
-    #     if len(window) - 1 - winsize >= 0:
-    #         sm -= window[len(window) - 1 - winsize]
-    # print(K)
+    print("Number of bids won:", cnt)
+    print("Number of bids expected:", len(clicks) * portion)
+    print("Number of clicks won:", clickcnt)
+    print("Number of clicks expected:", sum(clicks) * portion)
+    print("Budget remaining:", B, "out of", sum(bids) * portion)
+    print("Percent of udget remaining:", B/(sum(bids) * portion))
+    print("Total impressions:", len(bids))
+    print("Lucky Wins:" , lucky_wins)
+    print("EV of clicks:" , clicks_ev)
+    fig, axs = plt.subplots(3, figsize=(9, 9));
+    axs[0].scatter([i for i in range(len(k_change))], k_change)
+    axs[1].scatter([i for i in range(len(winrate_change))], winrate_change)
+    axs[2].scatter([i for i in range(len(b_change))], b_change)
+    # plt.scatter(x_axis,b_change)
+    axs[1].plot([i for i in range(len(winrate_change))], [portion for i in range(len(winrate_change))], '--', color='red')
+    plt.show()
 
-
-print("Number of bids won:", cnt)
-print("Number of bids expected:", len(clicks_test)/8)
-print("Number of clicks won:", clickcnt)
-print("Number of clicks expected:", sum(clicks_test)/8)
-
-# print(clickcnt)
-print("Budget remaining:", B, "out of", sum(bids_test) / 8)
-print("Total impressions:", len(bids_test))
-# print(sum(bids_test) / 8)
-# print(sum(clicks_test) / 8)
-# print(sum(clicks_test) / 8)
-print("Lucky Wins:" , lucky_wins)
-plt.scatter(x_axis,resu)
-# plt.scatter(x_axis,[0.125 for i in range len(bids_test)]])
-plt.plot(x_axis, [0.125 for i in range(len(bids_test))], '--', color='red')
-# plt.scatter(x_axis,cbb)
-
-plt.show()
+run_test()
