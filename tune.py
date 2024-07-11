@@ -5,15 +5,19 @@ import numpy as np
 from scipy.optimize import curve_fit
 from scipy.interpolate import CubicSpline
 
-
+#################################################################
+# Processing Data
+#################################################################
 ctr = []
 bids = []
 
-fi = open(sys.argv[1], 'r') 
+campaign_number = sys.argv[1]
+
+fi = open('./make-ipinyou-data/'+campaign_number+'/train.yzx.txt.lr.pred', 'r') 
 for line in fi:
     ctr.append(float(line))
 
-fi = open(sys.argv[2], 'r')
+fi = open('./make-ipinyou-data/'+campaign_number+'/train.yzx.txt', 'r')
 for line in fi:
     bids.append(float(line.split()[1]))
 
@@ -60,27 +64,27 @@ axs[4].plot(x_new, y_new, '--', color='red')
 ctr_test = []
 bids_test = []
 clicks_test = []
-fi = open(sys.argv[3], 'r') 
+
+fi = open('./make-ipinyou-data/'+campaign_number+'/test.yzx.txt.lr.pred', 'r') 
 for line in fi:
     ctr_test.append(float(line))
 
-fi = open(sys.argv[4], 'r')
+fi = open('./make-ipinyou-data/'+campaign_number+'/test.yzx.txt', 'r')
 for line in fi:
     bids_test.append(float(line.split()[1]))
     clicks_test.append(int(line.split()[0]))
 
 
+#################################################################
+# Bidding Algorithm
+#################################################################
 
-# python3 assess.py ./make-ipinyou-data/1458/train.yzx.txt.lr.pred ./make-ipinyou-data/1458/train.yzx.txt ./make-ipinyou-data/1458/test.yzx.txt.lr.pred ./make-ipinyou-data/1458/test.yzx.txt
-# python3 assess.py ./make-ipinyou-data/1458/train.yzx.txt.lr.pred ./make-ipinyou-data/1458/train.yzx.txt ./make-ipinyou-data/1458/test.yzx.txt.lr.pred ./make-ipinyou-data/1458/test.yzx.txt
-
-
-
-def run_test(portion = 1/32, bids = bids_test, ctr = ctr_test, clicks = clicks_test, window_size = 2000, bid_factor = 0.4, winrate_factor = 0.003):
+def run_test(portion = 1/64, bids = bids_test, ctr = ctr_test, clicks = clicks_test, window_portion = 0.02, bid_factor = 0.4, winrate_factor = 0.003):
+    window_size = int(window_portion * len(bids_test))
     B = sum(bids) * portion
     original_budget = B
     goal = portion
-    K = 30000
+    K = 10000   # initial value of K -- subject to change
 
     window = []
     winsm = 0
@@ -95,11 +99,11 @@ def run_test(portion = 1/32, bids = bids_test, ctr = ctr_test, clicks = clicks_t
     k_sum = 0
     last_reset = last_goal_change = -window_size
 
+    # metrics for debugging
     clickcnt = 0
     sm = 0
     lucky_wins = 0
     clicks_ev  =0
-
     losscnt = 0;
 
     def bid(i, cost):
@@ -175,10 +179,10 @@ def run_test(portion = 1/32, bids = bids_test, ctr = ctr_test, clicks = clicks_t
             if k_sum / window_size < 0.01:
                 K *= 1.02
                 last_reset = i
-        
-        
+    
+    return clickcnt
 
-
+    # more debugging resources
     print("Number of bids won:", cnt)
     print("Number of bids expected:", len(clicks) * portion)
     print("Number of clicks won:", clickcnt)
@@ -197,6 +201,5 @@ def run_test(portion = 1/32, bids = bids_test, ctr = ctr_test, clicks = clicks_t
     # plt.scatter(x_axis,b_change)
     axs[1].plot([i for i in range(len(winrate_change))], [portion for i in range(len(winrate_change))], '--', color='red')
     plt.show()
-
-
-run_test()
+    # return score based on number of clicks won
+    return clickcnt

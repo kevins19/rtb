@@ -2,3 +2,4 @@ make-ipinyou-data/
 optimal-rtb/
 .DS_STORE
 .conda/
+tune2.py
